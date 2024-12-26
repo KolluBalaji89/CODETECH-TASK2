@@ -1,0 +1,152 @@
+Backend Setup (Node.js, Express)
+
+1. Create a new Node.js project: npm init
+2. Install required dependencies: npm install express mongoose
+3. Create a new file server.js and add the following code:
+
+const express = require('express');
+const mongoose = require('mongoose');
+const app = express();
+app.use(express.json());
+
+mongoose.connect('mongodb://localhost/weather-forecast', { useNewUrlParser: true, useUnifiedTopology: true });
+
+const db = mongoose.connection;
+
+db.on('error', (err) => {
+  console.error(err);
+});
+
+db.once('open', () => {
+  console.log('Connected to MongoDB');
+});
+
+const weatherRouter = require('./routes/weather');
+app.use('/api/weather', weatherRouter);
+
+const port = 3001;
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});
+
+1. Create a new folder models and add a file Weather.js with the following code:
+
+const mongoose = require('mongoose');
+
+const weatherSchema = new mongoose.Schema({
+  city: String,
+  temperature: Number,
+  humidity: Number,
+  weatherCondition: String,
+});
+
+const Weather = mongoose.model('Weather', weatherSchema);
+
+module.exports = Weather;
+
+1. Create a new folder routes and add a file weather.js with the following code:
+
+const express = require('express');
+const router = express.Router();
+const Weather = require('../models/Weather');
+
+router.get('/', async (req, res) => {
+  try {
+    const weatherData = await Weather.find();
+    res.json(weatherData);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching weather data' });
+  }
+});
+
+router.post('/', async (req, res) => {
+  try {
+    const weatherData = new Weather(req.body);
+    await weatherData.save();
+    res.json(weatherData);
+  } catch (err) {
+    res.status(500).json({ message: 'Error creating weather data' });
+  }
+});
+
+module.exports = router;
+
+
+Frontend Setup (React)
+
+1. Create a new React app: npx create-react-app client
+2. Install required dependencies: npm install axios
+3. Create a new file WeatherApp.js with the following code:
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function WeatherApp() {
+  const [city, setCity] = useState('');
+  const [temperature, setTemperature] = useState('');
+  const [humidity, setHumidity] = useState('');
+  const [weatherCondition, setWeatherCondition] = useState('');
+
+  useEffect(() => {
+    axios.get('http://localhost:3001/api/weather')
+      .then(response => {
+        setCity(response.data.city);
+        setTemperature(response.data.temperature);
+        setHumidity(response.data.humidity);
+        setWeatherCondition(response.data.weatherCondition);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+  }, []);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    axios.post('http://localhost:3001/api/weather', {
+      city,
+      temperature,
+      humidity,
+      weatherCondition,
+    })
+      .then(response => {
+        console.log(response.data);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+  };
+
+  return (
+    <div>
+      <h1>Weather Forecast App</h1>
+      <form onSubmit={handleSubmit}>
+        <label>City:</label>
+        <input type="text" value={city} onChange={(event) => setCity(event.target.value)} />
+        <br />
+        <label>Temperature:</label>
+        <input type="number" value={temperature} onChange={(event) => setTemperature(event.target.value)} />
+        <br />
+        <label>Humidity:</label>
+        <input type="number" value={humidity} onChange={(event) => setHumidity(event.target.value)} />
+        <br />
+        <label>Weather Condition:</label>
+        <input type="text" value={weatherCondition} onChange={(event) => setWeatherCondition(event.target.value)} />
+        <br />
+        <button type="submit">Submit</button>
+      </form>
+      <h2>Weather Forecast:</h2>
+      <p>City: {city}</p>
+      <p>Temperature: {temperature}°C</p>
+      <p>Humidity: {humidity}%</p>
+      <p>Weather Condition: {weatherCondition}</p>
+    </div>
+  );
+}
+
+export default WeatherApp;
+
+1. Update the index.js file to render the WeatherApp component:
+
+import React from 'react';
+import ReactDOM from 'react-dom';
+import WeatherApp from './
